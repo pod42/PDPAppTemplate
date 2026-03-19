@@ -431,6 +431,15 @@ body {
   margin: 0 auto;
 }
 
+.mock-mode-banner {
+  background: #FFF3CD;
+  color: #856404;
+  border-bottom: 1px solid #FFEEBA;
+  padding: 8px 16px;
+  font-size: 13px;
+  text-align: center;
+}
+
 .app-shell-placeholder {
   text-align: center;
   padding: 64px 32px;

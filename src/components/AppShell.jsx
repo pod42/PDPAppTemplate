@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import ToastContainer from './Toast.jsx';
 import { useToast } from '../hooks/useToast.js';
-import { fetchProfile, ensureOwnInboxAppendable } from '../utils/solid.js';
+import * as solidOps from '../utils/solid.js';
+import * as mockOps from '../utils/mockStorage.js';
+
+const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
+const ops = MOCK_MODE ? mockOps : solidOps;
 
 /**
  * AppShell — the main authenticated app scaffold.
@@ -20,10 +24,10 @@ export default function AppShell({ session, webId, onLogout }) {
   useEffect(() => {
     async function init() {
       try {
-        const p = await fetchProfile(webId, session.fetch);
+        const p = await ops.fetchProfile(webId, session.fetch);
         setProfile(p);
         // Ensure the user's inbox exists and accepts append (needed for sharing)
-        await ensureOwnInboxAppendable(webId, session.fetch);
+        await ops.ensureOwnInboxAppendable(webId, session.fetch);
       } catch (err) {
         console.error('AppShell init error:', err);
         addToast('Could not load profile. Check your pod connection.', 'error');
@@ -44,6 +48,11 @@ export default function AppShell({ session, webId, onLogout }) {
 
   return (
     <div className="app-shell">
+      {MOCK_MODE && (
+        <div className="mock-mode-banner">
+          Mock mode — data stored in browser localStorage only
+        </div>
+      )}
       {/* ── Replace everything below with your application UI ── */}
       <header className="app-shell-header">
         <h1 className="app-shell-title">
