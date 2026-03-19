@@ -150,7 +150,12 @@ VITE_APP_DOMAIN       — production domain (no https://)
 VITE_THEME_COLOR      — PWA theme color hex
 VITE_BG_COLOR         — PWA background color hex
 VITE_SUPPORT_EMAIL    — support contact email
+VITE_MOCK_MODE        — set to 'true' to run without a pod (dev only)
 ```
+
+## 9a. Mock Mode
+
+Add `VITE_MOCK_MODE=true` to `.env` to run the app without a Solid pod or OIDC login. Data is stored in browser `localStorage` via `src/utils/mockStorage.js`. `App.jsx` detects this flag at startup and skips the login screen entirely, injecting `mockSession` into `AppShell`. All pod operations route through `ops.*` which resolves to either `solidOps` or `mockOps` depending on the flag. Never deploy with this flag enabled.
 
 ---
 

@@ -147,7 +147,20 @@ VITE_APP_DOMAIN       — production domain (no https://)
 VITE_THEME_COLOR      — PWA theme color hex
 VITE_BG_COLOR         — PWA background color hex
 VITE_SUPPORT_EMAIL    — support email for SupportModal
+VITE_MOCK_MODE        — set to 'true' for local dev without a pod (dev only, never deploy)
 ```
+
+## Mock Mode (`src/utils/mockStorage.js`)
+
+When `VITE_MOCK_MODE=true`, `App.jsx` bypasses OIDC entirely and renders `AppShell` with `mockSession`. `AppShell` switches all pod operations to `mockOps` (localStorage-backed):
+
+```js
+const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
+const ops = MOCK_MODE ? mockOps : solidOps;
+// then use ops.fetchProfile(), ops.listContainer(), ops.uploadFile() etc.
+```
+
+The mock exports mirror solid.js exactly — generated apps work in both modes with no logic changes.
 
 ## Login Flow (post-authentication)
 

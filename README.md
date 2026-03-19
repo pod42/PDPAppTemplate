@@ -51,6 +51,8 @@ VITE_BG_COLOR=#F8F9FA
 VITE_SUPPORT_EMAIL=support@example.com
 ```
 
+> **Tip — Mock Mode:** Add `VITE_MOCK_MODE=true` to your `.env` to run the app locally without a Solid pod or OIDC login. Data is stored in browser `localStorage`. Remove the flag before deploying. See [Mock Mode](#mock-mode) for details.
+
 ### 3 — Update the OIDC client registration
 
 Edit `public/client-id.json` — replace every occurrence of `YOUR-APP-DOMAIN` with your production domain:
@@ -390,6 +392,44 @@ After pointing DNS, request a certificate in AWS Certificate Manager (**us-east-
 ### Environment variables at build time
 
 All `VITE_` variables in `.env` are embedded at build time by Vite. They are public — do not put secrets in `.env`.
+
+---
+
+## Mock Mode
+
+Mock mode lets you build and test your app locally without a Solid pod or OIDC login. All data is stored in browser `localStorage`.
+
+### Enable mock mode
+
+Add to your `.env`:
+
+```env
+VITE_MOCK_MODE=true
+```
+
+Then run `npm run dev`. The app loads immediately — no login screen, no pod required. A yellow banner at the top of the screen reminds you that mock mode is active.
+
+### How it works
+
+`src/utils/mockStorage.js` provides drop-in replacements for every `solid.js` function used by `AppShell`:
+
+| Function | Mock behaviour |
+|---|---|
+| `fetchProfile()` | Returns `{ name: 'Mock User', storageRoot: 'mock://pod/' }` |
+| `createFolder()` | No-op |
+| `ensureOwnInboxAppendable()` | No-op |
+| `listContainer(url)` | Scans `localStorage` keys with prefix `mock_pod:` under the given URL |
+| `uploadFile(url, blob)` | Reads blob as text, stores at `localStorage['mock_pod:' + url]` |
+| `deleteResource(url)` | Removes the `localStorage` key |
+| `mockFetch(url)` | `HEAD` → 200/404; `GET` → parsed JSON or 404; anything else → 200 |
+
+`App.jsx` detects `VITE_MOCK_MODE=true` and bypasses auth entirely, passing `mockSession` (whose `.fetch` is `mockFetch`) directly to `AppShell`.
+
+### Switching between real and mock mode
+
+Change `VITE_MOCK_MODE` in `.env` and restart the dev server. No code changes needed.
+
+> **Important:** Never set `VITE_MOCK_MODE=true` in a production `.env` or build — the variable is embedded at build time.
 
 ---
 
