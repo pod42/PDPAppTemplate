@@ -19,6 +19,7 @@ The recommended pod provider is **privatedatapod.com**.
 | Frontend | React 19, Vite 7 |
 | Solid client | `@inrupt/solid-client` 2.x, `@inrupt/solid-client-authn-browser` 2.x |
 | RDF vocab | `@inrupt/vocab-common-rdf` |
+| Vault (encrypted storage) | `@privatedatapod/vault-sdk` 0.2.x |
 | Pod server | Community Solid Server (CSS) at `privatedatapod.com` |
 | Hosting | AWS S3 + CloudFront |
 | Deployment | `.\deploy\deploy.ps1 -Action update` |
@@ -33,16 +34,18 @@ src/
   App.jsx                   — auth routing (LoginScreen ↔ AppShell)
   app.css / index.css       — all app styles + design tokens
   hooks/
-    useAuth.js              — OIDC session wrapper  (DO NOT MODIFY)
-    useToast.js             — toast hook            (DO NOT MODIFY)
+    useAuth.js              — OIDC session wrapper     (DO NOT MODIFY)
+    useToast.js             — toast hook               (DO NOT MODIFY)
+    useVaultStorage.js      — encrypted vault hook     (DO NOT MODIFY)
   utils/
-    solid.js                — ALL Solid protocol ops (DO NOT MODIFY)
-    fileUtils.js            — file type helpers      (DO NOT MODIFY)
+    solid.js                — ALL Solid protocol ops   (DO NOT MODIFY)
+    fileUtils.js            — file type helpers        (DO NOT MODIFY)
   lib/
     errorLog.js             — ring-buffer error logger (DO NOT MODIFY)
   components/
     LoginScreen.jsx         — OIDC login UI (branding from VITE_ env vars)
     AppShell.jsx            — ← REPLACE THIS with your application
+    VaultAccessBanner.jsx   — shown when vault approval is pending
     Modal.jsx               — generic modal wrapper
     Toast.jsx               — toast notification UI
     SupportModal.jsx        — support email + diagnostics
@@ -151,11 +154,41 @@ VITE_THEME_COLOR      — PWA theme color hex
 VITE_BG_COLOR         — PWA background color hex
 VITE_SUPPORT_EMAIL    — support contact email
 VITE_MOCK_MODE        — set to 'true' to run without a pod (dev only)
+VITE_APP_NAMESPACE    — reverse-DNS vault namespace, e.g. com.example.myapp
 ```
 
 ## 9a. Mock Mode
 
-Add `VITE_MOCK_MODE=true` to `.env` to run the app without a Solid pod or OIDC login. Data is stored in browser `localStorage` via `src/utils/mockStorage.js`. `App.jsx` detects this flag at startup and skips the login screen entirely, injecting `mockSession` into `AppShell`. All pod operations route through `ops.*` which resolves to either `solidOps` or `mockOps` depending on the flag. Never deploy with this flag enabled.
+Add `VITE_MOCK_MODE=true` to `.env` to run the app without a Solid pod or OIDC login. Data is stored in browser `localStorage` via `src/utils/mockStorage.js`. `App.jsx` detects this flag at startup and skips the login screen entirely, injecting `mockSession` into `AppShell`. All pod operations route through `ops.*` which resolves to either `solidOps` or `mockOps` depending on the flag. Vault encryption is disabled in mock mode. Never deploy with this flag enabled.
+
+---
+
+## 9b. Vault (Encrypted Storage)
+
+`useVaultStorage.js` wraps `@privatedatapod/vault-sdk` in delegation-only mode:
+
+- The user approves this device once on their **Account page** (`privatedatapod.com/.account/`) under *Pending Approvals*.
+- No passphrase is ever collected by the app — keys live in an encrypted vault on the user's pod.
+- `AppShell` calls `openVault()` automatically after the profile loads.
+
+### When `needsApproval` is true
+- The vault has no grant for this device yet.
+- `VaultAccessBanner` is displayed, linking the user to their Account page.
+- The delegation public key has already been published, so it appears under *Pending Approvals*.
+
+### Reading / writing encrypted files
+```js
+// storageRef.current is a PodStorage instance — use it like this:
+const bytes = await storageRef.current.get('myfile.bin');
+await storageRef.current.put('myfile.bin', bytes, 'application/octet-stream');
+await storageRef.current.delete('myfile.bin');
+```
+
+### App namespace
+Set `VITE_APP_NAMESPACE` in `.env` to a stable reverse-DNS string, e.g. `com.example.myapp`. All vault keys for this app are isolated under this namespace. If omitted, falls back to `com.privatedatapod.app`.
+
+### MOCK_MODE
+Vault is fully disabled when `VITE_MOCK_MODE=true`. `storageRef.current` is always `null` and no crypto operations run.
 
 ---
 

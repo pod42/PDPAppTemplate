@@ -440,6 +440,22 @@ body {
   text-align: center;
 }
 
+/* ── Vault access banner ──────────────────────────────────────────── */
+.vault-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #EFF6FF;
+  color: #1E40AF;
+  border-bottom: 1px solid #BFDBFE;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+.vault-banner-icon { font-size: 18px; line-height: 1.4; flex-shrink: 0; }
+.vault-banner-text { line-height: 1.6; }
+.vault-banner-text a { color: #1D4ED8; font-weight: 600; }
+.vault-banner-text a:hover { text-decoration: underline; }
+
 .app-shell-placeholder {
   text-align: center;
   padding: 64px 32px;
