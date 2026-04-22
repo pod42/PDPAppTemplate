@@ -28,7 +28,7 @@ This template gives developers a pre-wired React app that authenticates with any
 ### 1 — Clone and install
 
 ```bash
-git clone https://github.com/YOUR-ORG/PDPAppTemplate.git my-new-app
+git clone https://github.com/pod42/PDPAppTemplate.git my-new-app
 cd my-new-app
 npm install
 ```
@@ -126,10 +126,12 @@ PDPAppTemplate/
 │   │   ├── LoginScreen.jsx         ← OIDC login UI
 │   │   ├── Modal.jsx               ← generic accessible modal
 │   │   ├── SupportModal.jsx        ← support email + diagnostics dialog
-│   │   └── Toast.jsx               ← toast notification UI
+│       ├── Toast.jsx               ← toast notification UI
+│       └── VaultAccessBanner.jsx   ← shown when vault delegation is pending approval
 │   ├── hooks/
 │   │   ├── useAuth.js              ← OIDC session state (do not modify)
-│   │   └── useToast.js             ← toast state hook (do not modify)
+│   │   ├── useToast.js             ← toast state hook (do not modify)
+│   │   └── useVaultStorage.js      ← encrypted vault hook (do not modify)
 │   ├── lib/
 │   │   └── errorLog.js             ← ring-buffer error logger (do not modify)
 │   └── utils/
@@ -158,6 +160,7 @@ These are infrastructure shared by all Solid apps. Modifying them can break auth
 
 - `src/hooks/useAuth.js`
 - `src/hooks/useToast.js`
+- `src/hooks/useVaultStorage.js`
 - `src/utils/solid.js`
 - `src/utils/fileUtils.js`
 - `src/lib/errorLog.js`
@@ -352,9 +355,30 @@ All styles live in `src/app.css`. Use the design tokens for consistency:
 
 ## Deployment
 
-The deploy script creates an AWS S3 bucket and CloudFront distribution. You need the AWS CLI installed and configured (`aws configure`).
+There are two ways to deploy your app. The Private Data Pod Developer Center is the quickest path.
 
-### First deploy
+### Option 1 — Private Data Pod Developer Center (recommended)
+
+**[developers.privatedatapod.com](https://developers.privatedatapod.com)** is the fastest way to get your app live. Free accounts include 5 hosted app slots; Pro accounts include 25.
+
+1. Build your app:
+   ```bash
+   npm run build
+   ```
+2. Go to [developers.privatedatapod.com](https://developers.privatedatapod.com) and sign in with your pod account.
+3. Click **Deploy New App** and upload your `dist/` folder (or drag-and-drop the folder).
+4. Your app is live at `https://{your-app-name}.privatedatapod.com` — no AWS account, no DNS setup, no certificates.
+
+The dev center also gives you:
+- Per-app storage usage tracking
+- One-click redeployment
+- Vault SDK documentation and quick-start guides
+
+### Option 2 — AWS S3 + CloudFront (custom domain)
+
+Use this if you need your own domain or full infrastructure control. You need the AWS CLI installed and configured (`aws configure`).
+
+#### First deploy
 
 ```powershell
 .\deploy\deploy.ps1 -Domain "myapp.example.com"
@@ -373,19 +397,19 @@ After the first deploy, point your DNS CNAME:
 myapp.example.com  →  d3abc123.cloudfront.net
 ```
 
-### Subsequent deploys
+#### Subsequent deploys
 
 ```powershell
 .\deploy\deploy.ps1 -Action update -Domain "myapp.example.com"
 ```
 
-### Cache bust only
+#### Cache bust only
 
 ```powershell
 .\deploy\deploy.ps1 -Action invalidate
 ```
 
-### Custom domain with HTTPS
+#### Custom domain with HTTPS
 
 After pointing DNS, request a certificate in AWS Certificate Manager (**us-east-1 region only**), then update your CloudFront distribution to use the custom domain and certificate.
 
@@ -493,9 +517,37 @@ Create a component in `src/components/`, import it into `AppShell.jsx`, and add 
 
 ---
 
+## Encrypted Storage with the Vault SDK
+
+This template includes [`@privatedatapod/vault-sdk`](https://github.com/pod42/PDPVault-SDK) — a zero-dependency library for client-side encrypted file storage in Solid pods. All encryption runs in the browser; the server never sees plaintext.
+
+The `useVaultStorage` hook in `src/hooks/useVaultStorage.js` wraps the SDK for React. Use it in your `AppShell.jsx` when you need encrypted storage:
+
+```jsx
+import { useVaultStorage } from '../hooks/useVaultStorage.js'
+
+export default function AppShell({ session, webId, onLogout }) {
+  const { storage, isEncrypted, isDelegated, needsApproval, open, lock } =
+    useVaultStorage(profile?.storageRoot, session.fetch, 'com.example.myapp')
+
+  // open the vault once the profile is loaded
+  // encrypted if the user has a Pro plan + vault set up; plaintext otherwise
+}
+```
+
+When `needsApproval` is true, render `<VaultAccessBanner />` to prompt the user to approve your app on their Account page. After approval, the vault opens silently on every subsequent visit — no passphrase prompt.
+
+Encrypted storage requires a **Pro plan** on [privatedatapod.com](https://privatedatapod.com). Free-plan users get the same API in plaintext mode (`isEncrypted === false`). Your code is identical either way.
+
+Full SDK documentation: [github.com/pod42/PDPVault-SDK](https://github.com/pod42/PDPVault-SDK)
+
+---
+
 ## Contributing
 
-This template is maintained at **privatedatapod.com**. To report issues or suggest improvements, open an issue or PR on the GitHub repository.
+This template is maintained by the Private Data Pod team. To report issues or suggest improvements, open an issue or PR at [github.com/pod42/PDPAppTemplate](https://github.com/pod42/PDPAppTemplate).
+
+To build apps with this template and deploy them instantly, visit the [Private Data Pod Developer Center](https://developers.privatedatapod.com).
 
 ---
 
